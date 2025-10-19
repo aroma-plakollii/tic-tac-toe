@@ -1,45 +1,56 @@
 import { useState } from "react"
-import GameBoard from "./components/GameBoard"
-import Players from "./components/Players"
-import { Log } from "./components/Log";
-
-function deriveActivePlayer(gameTurns){
-  let currentPlayer = 'X';
-
-  if(gameTurns.length > 0 && gameTurns[0].player === 'X'){
-    currentPlayer = 'O';
-  }
-
-  return currentPlayer
-}
+import GameBoard from "./components/GameBoard";
+import Log from "./components/Log";
+import Players from "./components/Players";
+import GameOver from "./components/GameOver";
+import { PLAYERS } from "./data/players";
+import { INITIAL_GAME_BOARD } from "./data/initialGameBoard";
+import { WINNING_COMBINATIONS } from "./data/winningCombinations";
+import { deriveBoardGame, deriveCurrentPlayer, deriveWinner } from "./data/derivedData";
 
 function App() {
-  const [gameTurns, setGameTurns] = useState([]);
-  // const [activePlayer, setActivePlayer] = useState('X');
+  const [turns, setTurns] = useState([]);
+  const [player, setPlayer] = useState(PLAYERS);
 
-  const activePlayer = deriveActivePlayer(gameTurns);
+  const currentPlayer = deriveCurrentPlayer(turns);
+  const boardGame = deriveBoardGame(INITIAL_GAME_BOARD, turns);
+  const winner = deriveWinner(boardGame, WINNING_COMBINATIONS, player);
+  const isDraw = turns.length === 9 && !winner;
 
-  function handleActivePlayer(rowIndex, colIndex){
-    // setActivePlayer((prevActivePlayer) => prevActivePlayer === 'X' ? 'O' : 'X'); 
-    setGameTurns((prevGameTurns) => {
-      let currentPlayer = deriveActivePlayer(prevGameTurns);
-      
-      const updatedGameTurns = [{square: {row: rowIndex, col: colIndex}, player: currentPlayer}, ...prevGameTurns];
+  function handleSymbolSelection(rowIndex, colIndex){
+    setTurns((prevTurns) => {
+      let currentPlayer = deriveCurrentPlayer(prevTurns);
 
-      return updatedGameTurns;
+      const updatedTurns = [{square: {row: rowIndex, col: colIndex}, player: currentPlayer}, ...prevTurns];
+
+      return updatedTurns;
     });
+  }
+
+  function handleRematch(){
+    setTurns([]);
+  }
+
+  function handlePlayer(symbol, playerName){
+    setPlayer((prevPlayer) => {
+      return {
+        ...prevPlayer,
+        [symbol] : playerName
+      }
+    })
   }
 
   return (
     <main>
       <div id='game-container'>
           <ol id='players' className='highlight-player'>
-          <Players isActive={activePlayer === 'X'} initialName={'Player 1'} symbol={'X'} />
-          <Players isActive={activePlayer === 'O'} initialName={'Player 2'} symbol={'O'} />
+            <Players isActive={currentPlayer === 'X'} symbol='X' initialName={PLAYERS['X']} onPlayer={handlePlayer} />
+            <Players isActive={currentPlayer === 'O'} symbol='O' initialName={PLAYERS['O']} onPlayer={handlePlayer} />
           </ol>
-        <GameBoard turns={gameTurns} onActivePlayer={handleActivePlayer} />
+          {(winner || isDraw) && <GameOver winner={winner} onRematch={handleRematch} />}
+          <GameBoard boardGame={boardGame} onSymbolSelection={handleSymbolSelection} />
       </div>
-      <Log turns={gameTurns} />
+      <Log turns={turns} />
     </main>
   )
 }
